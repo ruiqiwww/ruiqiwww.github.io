@@ -1,1 +1,25 @@
+.container {
+    margin-top: 20px;
+    margin-bottom: 20px;
+    
+}
 
+.columns {
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-start;
+}
+
+.column {
+    width: 50%;
+}
+
+.column h2 {
+    margin-bottom: 10px;
+}
+
+.column img {
+    width: 90%;
+    height: auto;
+    margin-bottom: 20px;
+}
