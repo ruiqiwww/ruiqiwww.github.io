@@ -18,18 +18,57 @@
     <h3>by Ruiqi Wang</h3>
 
     <div class="container">
+        <h2>Method</h2>
+        <h3>Preprocessing</h3>
+        <p>To avoid the bad effect by the border of images, I manually cut off 15% of the image on the border. (10% for emir.tif because 15% produces a bad outcome)</p>
+        <h3>Single-scale implementation</h3>
+        <p>For Single-scale implementation, I exhaustively searched over [-15, 15] pixels for both x and y axis, 
+            and return the best offset with the smallest Euclidean Distance, which indicates good alignment. </p>
+        <h3>Multi-scale implementation</h3>
+        <p>Based on the Single-Scale implementation, I employed an image pyramid of level 3 to improve the efficiency of aligning. 
+            For base case of level 0, use single-scale implementation to find best offset with smallest Euclidean Distance. 
+            For higher levels, the image is downscaled by a factor of 2, then the function is recursively called to find best offset in lower resolution. 
+            Based on the best shift at lower resolution, that shift is scaled up and refined with another single-scale search at the original resolution. 
+            </p>
+    </div>
+
+    <div class="container">
         <h2>Outcomes</h2>
         <div class="columns">
             <div class="column">
                 <h3>Raw</h3>
                 <img src="media/naive_cathedral.jpg">
                 <img src="media/naive_church.jpg">
+                <img src="media/naive_emir.jpg">
+                <img src="media/naive_harvesters.jpg">
+                <img src="media/naive_icon.jpg">
+                <img src="media/naive_lady.jpg">
+                <img src="media/naive_melons.jpg">
+                <img src="media/naive_monastery.jpg">
+                <img src="media/naive_onion_church.jpg">
+                <img src="media/naive_sculpture.jpg">
+                <img src="media/naive_self_portrait.jpg">
+                <img src="media/naive_three_generations.jpg">
+                <img src="media/naive_tobolsk.jpg">
+                <img src="media/naive_train.jpg">
             </div>
     
             <div class="column">
                 <h3>Aligned</h3>
                 <img src="media/aligned_cathedral.jpg">
                 <img src="media/aligned_church.jpg">
+                <img src="media/aligned_emir.jpg">
+                <img src="media/aligned_harvesters.jpg">
+                <img src="media/aligned_icon.jpg">
+                <img src="media/aligned_lady.jpg">
+                <img src="media/aligned_melons.jpg">
+                <img src="media/aligned_monastery.jpg">
+                <img src="media/aligned_onion_church.jpg">
+                <img src="media/aligned_sculpture.jpg">
+                <img src="media/aligned_self_portrait.jpg">
+                <img src="media/aligned_three_generations.jpg">
+                <img src="media/aligned_tobolsk.jpg">
+                <img src="media/aligned_train.jpg">
             </div>
         </div>
     </div>
