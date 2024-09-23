@@ -12,10 +12,12 @@
 
 .column {
     width: 50%;
+    text-align: center;
 }
 
-.column h2 {
+.column h3 {
     margin-bottom: 10px;
+    
 }
 
 .column img {
@@ -23,3 +25,5 @@
     height: auto;
     margin-bottom: 20px;
 }
+
+
