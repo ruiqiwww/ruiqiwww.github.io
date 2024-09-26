@@ -1,1 +1,335 @@
 
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CS180 Project 2 - Ruiqi Wang</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>CS180 Project 2</h1>
+    <h2>Fun with Filters and Frequencies</h2>
+    <h3>by Ruiqi Wang</h3>
+    <div class="container">
+        <h2>Overview</h2>
+        <p>In this project, we used low-pass and high-pass filters to get different frequencies, and change frequencies in order to find edges, sharpen images, hybrid images and blend images. </p>
+    </div>
+    <div class="container">
+        <h2>Part 1: Fun with Filters</h2>
+        <h3>Part 1.1: Finite Difference Operator</h3>
+        <p>I took the first color channel of cameraman.jpg and turn it into a gray-scale image. Then, I convolved cameraman.jpg with Dx= np.array([[-1, 1]]) and Dy= np.array([[-1], [1]]) respectively to get the partial derivatives below: </p>
+        <img src="media/part1/1.1partial_derivatives.png">
+        <p>Then, I computed the gradient magnitude using sqrt(dx^2 + dy^2), and binarized the graph to get an edge graph with a threshold of 80 over the range of [0, 255]</p>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/part1/1.1gradient_magnitude.png">
+                <p>Gradient magnitude</p>
+            </div>
+            <div class="image-container">
+                <img src="media/part1/1.1edge_image.png">
+                <p>Binarized edge image with threshold=80</p>
+            </div>
+        </div>
+
+        <h3>Part 1.2: Derivative of Gaussian (DoG) Filter</h3>
+        <p><b>Gaussian</b></p>
+        <p>I applied the Gaussian filter (using cv2.getGaussianKernel, with sigma=1 and size=5) to blur the image, and then convolved the blurred cameraman.jpg with Dx and Dy respectively. 
+            Using the same method as in part 1.1, I got gradient magnitude image and edge graph(with threshold=30) of the blurred cameraman.jpg. Below is the partial derivatives in both axis, gradient magnitude image, and edge image of the blurred image: </p>
+        <img src="media/part1/1.2Gaussian_partial_derivatives.png">
+        <div class="images">
+            <div class="image-container">
+                <img src="media/part1/1.2Gaussian_gradient_magnitude.png">
+                <p>Gaussian gradient magnitude</p>
+            </div>
+            <div class="image-container">
+                <img src="media/part1/1.2Gaussian_edge_image.png">
+                <p>Binarized edge image with threshold=30</p>
+            </div>
+        </div>
+        <p><b>What differences do you see?</b></p>
+        <p>The edges are cleaner and smoother. Less noise shows up after blurred by gaussian filter. 
+            Also, quantitatively the threshold for a clear edge graph is much lower, because high frequencies are filtered out. </p>
+        
+        <p><b>DoG</b></p>
+        <p>Instead of convolving twice using cameraman.jpg, I convolved the 2D gaussian with Dx and Dy respectively to get a derivative of Gaussian filter. </p>
+        <img src="media/part1/1.2DoG_filter.png">
+        <p>Then, apply DoG to cameraman.jpg. Below is the partial derivatives, gradient magnitude, and edge image using DoG: </p>
+        <img src="media/part1/1.2DoG_partial_derivatives.png">
+        <div class="images">
+            <div class="image-container">
+                <img src="media/part1/1.2DoG_gradient_magnitude.png">
+                <p>DoG gradient magnitude</p>
+            </div>
+            <div class="image-container">
+                <img src="media/part1/1.2DoG_edge_image.png">
+                <p>Binarized edge image</p>
+            </div>
+        </div>
+        <p><b>DoG</b></p>
+        <p>The result of DoG is almost the same, with a similar threshold for clear binarized edge image, except for some different noises. </p>
+
+    </div>
+    <div class="container">
+        <h2>Part 2: Fun with Frequencies!</h2>
+        <h3>Part 2.1: Image "Sharpening"</h3>
+        <h4>Approach</h4>
+        <p>An image often looks sharper if it has stronger high frequencies. 
+            Thus, to "sharpen" an image, I use Gaussian filter to blur the image and reatain the low frequencies, then subtract the blurred image from the original image to get the high frequencies. 
+            Finally, I add alpha times of these high frequencies back to make them stronger, thus sharpening the original graph. </p>
+        <p>In order to combine this into a single convolution operaton, I created a unsharp mask kernel. I created an identity kernel with same size as my gaussian kernal as impulse. </p>
+        <p>unsharp_kernel = impulse + alpha * high_freq = impulse + alpha * (impulse-gaussian) = (1 + alpha) * impulse - alpha * (gaussian). </p>
+        <p>Thus, with this kernel function, I can try kernels of different sizes and sigmas to find best results. </p>
+        <p>First, divide colored image into R,G,B channels; then convolve each channel with the kernel (clip the sharpened image to avoid values > 255); then merge RGB channels back together to get sharpened image. </p>
+        <h4>Result for taj.jpg: </h4>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/sharpen/taj.jpg">
+                <p>Original taj</p>
+            </div>
+            <div class="image-container">
+                <img src="media/sharpen/sharpened_taj.jpg">
+                <p>Sharpened taj (kernel_size=3, sigma=1, alpha=1)</p>
+            </div>
+        </div>
+
+        <h4>Result for flower.jpg of my own choice: </h4>
+        <p>Then I picked a picture of a flower. I blurred it using Gaussian filter, and used the same method as before to try to sharpen the blurred flower. 
+            The clear lines are sharpened using the method, but some smaller details did not go back. The sharpened image is much better than blurred ones, but it is not as clear as the original image no matter what my alpha is. 
+            I think this is because some small details are lost when you blurred the image; then when you try to use the blurred image to sharpen it back, you can never get those information that is already lost. </p>
+        
+        <div class="images">
+            <div class="image-container">
+                <img src="media/sharpen/flower.jpg">
+                <p>Original flower</p>
+            </div>
+            <div class="image-container">
+                <img src="media/sharpen/blurred_flower.jpg">
+                <p>Blurred flower (sigma=4, kernel_size=30)</p>
+            </div>
+            <div class="image-container">
+                <img src="media/sharpen/sharpened_flower.jpg">
+                <p>Sharpended blurred flower (sigma=4, kernel_size=15, alpha=3)</p>
+            </div>
+        </div>
+
+        <h3>Part 2.2: Hybrid Images</h3>
+        <h4>Approach</h4>
+        <p>To hybrid two images, first I used rgb2gray from skimage.color to make both images gray-scale. 
+            Then, I aligned the images using the code provided. sktr.rescale is rescaling the color channel as well on my end, so I added channel_axis=-1 to make sure the images still remain 3 channels after rescaling. 
+            I selected the eyes of human and cat to align. 
+            Next, I used gaussian filter to low-pass filter the human image, and use (original - gaussian filtered image) to high-pass filter the cat image. 
+            Then, combine the low frequencies of human and the high frequencies of cat to hybrid the two images. Cat is visiible when you look at the hybrid image closely and Human is visible when you look at the hybrid image from a larger distance. 
+            I also implemented the pyramid function in the starter code to see changes of frequencies for the hybrid image. 
+        </p>
+        
+        <div class="images">
+            <div class="image-container">
+                <img src="media/hybrid/nutmeg.jpg">
+                <p>Original Nutmeg</p>
+            </div>
+            <div class="image-container">
+                <img src="media/hybrid/DerekPicture.jpg">
+                <p>Original Derek</p>
+            </div>
+        </div>
+        <br>
+        <p><center>Aligned Nutmeg and Derek</center></p>
+        <img src="media/hybrid/aligned_nutmeg&Derek.png">
+        
+        <div class="images">
+            <div class="image-container">
+                <img src="media/hybrid/hybrid_nutmeg&Derek.jpg">
+                <p>Hybrid Nutmeg(sigma1=8) and Derek(sigma2=8)</p>
+            </div>
+        </div>
+        <img src="media/hybrid/pyramid_nutmeg&Derek.png">
+
+        <h4>Cat and Dog</h4>
+        <p>This is my favourite one. I aligned the bottom of their ears and used same approach as before. cutoff frequency is 4 for high-pass filter and 3 for low-pass filter. </p>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/hybrid/im1_cat.jpeg">
+                <p>Original Cat</p>
+            </div>
+            <div class="image-container">
+                <img src="media/hybrid/im2_dog.jpg">
+                <p>Original Dog</p>
+            </div>
+        </div>
+        <br>
+        <p><center>Aligned Cat and Dog</center></p>
+        <img src="media/hybrid/aligned_cat&dog.png">
+        <div class="images">
+            <div class="image-container">
+                <img src="media/hybrid/hybrid_cat&dog.jpg">
+                <p>Hybrid Cat(sigma1=4) and Dog(sigma2=3)</p>
+            </div>
+        </div>
+        <img src="media/hybrid/pyramid_cat&dog.png">
+        <h4><center>Frequency Analysis with Fourier Transform for Cat(im1) and Dog(im2)</center></h4>
+
+        <img src="media/hybrid/ft_cat&dog.png">
+        
+        <h4>Happy and Sad faces</h4>
+        <p>I aligned the eyes of the faces. cutoff frequency is 4 for high-pass filter and 3 for low-pass filter. </p>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/hybrid/im1_sad.jpg">
+                <p>Original Sad Face</p>
+            </div>
+            <div class="image-container">
+                <img src="media/hybrid/im2_happy.jpg">
+                <p>Original Happy Face</p>
+            </div>
+        </div>
+        <br>
+        <p><center>Aligned Happy and Sad Faces</center></p>
+        <img src="media/hybrid/aligned_happy&sad.png">
+        <div class="images">
+            <div class="image-container">
+                <img src="media/hybrid/hybrid_happy&sad.jpg">
+                <p>Hybrid Sad(sigma1=4) and Happy(sigma2=3) faces</p>
+            </div>
+        </div>
+        <img src="media/hybrid/pyramid_happy&sad.png">
+        <p><center>Gaussian & Laplacian pyramids</center></p>
+        <br>
+        
+        <h4>Starbucks and Earth (Failed)</h4>
+        <p>I chose the two endpoints of the horizontal diameter of both images to align. Although both starbucks logo and earth are circles, I failed hybriding them. 
+            The starbucks logo has only two colors, dark green and white, thus is too clear after high-pass filter. 
+            On the other hand, the earth image I found does not use colors with strong contrast, thus it too blurred to recognize after low-pass filter. 
+        </p>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/hybrid/im1_starbucks.jpg">
+                <p>Original Starbucks Logo</p>
+            </div>
+            <div class="image-container">
+                <img src="media/hybrid/im2_earth.jpg">
+                <p>Original Earth</p>
+            </div>
+        </div>
+        <br>
+        <p><center>Aligned Starbucks and Earth</center></p>
+        <img src="media/hybrid/aligned_starbucks&earth.png">
+        
+        <div class="images">
+            <div class="image-container">
+                <img src="media/hybrid/hybrid_starbucks&earth.jpg">
+                <p>Hybrid Starbucks(sigma1=2) and Earth(sigma2=2)</p>
+            </div>   
+        </div>
+         
+    </div>
+
+    <div class="container">
+        <h3>Part 2.3 & 2.4: Multiresolution Blending</h3>
+        <h4>Approach</h4>
+        <p><b>Implementation of Gaussian stack and Laplacian stack</b></p>
+        <p>Add original image to stack first. Then I applied Gaussian filter to blur the image in previous layer, and add the blurred image to the gaussian stack. 
+            The Laplacian stack has the "difference" between each layer of the Gaussian stack, so I subtract next layer in the Gaussian stack from current layerof Gaussian stack, and add to the Laplacian stack. 
+            Below is the Gaussian stack and Laplacian stack of original apple.jpeg and orange.jpeg. 
+        </p>
+        <img src="media/spline/apple&orange/im1_original_gaussian.jpg">
+        <img src="media/spline/apple&orange/im1_original_laplacian.jpg">
+        <img src="media/spline/apple&orange/im2_original_gaussian.jpg">
+        <img src="media/spline/apple&orange/im2_original_laplacian.jpg">
+        <p><b>Multiresolution Blending</b></p>
+        <p>Using the Gaussian stack and Laplacian stack function, I blended the laplacian image in each level and then make a clear multiresolution blended image. 
+            First, make a 2-D mask, with left side filled with 0 and right side filled with 1. Make a laplacian stack of the mask. 
+            Then, divide both images into R,G,B channels, and make a laplacian stack for each channel of each image. 
+            Next,  for each level in the stack, laplacian mask * image1 laplacian to blend image1, and (1-laplacian mask) * image2 to blend image2. Add the blended image1 and blended image2 to be the laplacian graph of the final blended image in that level. 
+            After that, I got 3 laplacian stacks for the final blended image in R,G,B. Add up laplacian graph to reconstruct the final blended image, and stack RGB channels back to get a colored image. 
+        </p>
+        <h4>Apple and Orange with blending process</h4>
+        <img src="media/spline/apple&orange/im1_blended_laplacian.jpg">
+        <img src="media/spline/apple&orange/im2_blended_laplacian.jpg">
+        <img src="media/spline/apple&orange/blended_laplacian.jpg">
+        <div class="images">
+            <div class="image-container">
+                <img src="media/spline/apple&orange/blended.jpg">
+                <p>Blended Apple and Orange</p>
+            </div>
+        </div>
+
+        <h4>Tree in Spring and Fall with blending process</h4>
+        <p>To align the trees in two images, I reused the align code in Part2.2. I chose two points in the middle line that I want to blend the pictures together. </p>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/spline/spring&fall/spring.jpg">
+                <p>Original Tree in Spring</p>
+            </div>
+            <div class="image-container">
+                <img src="media/spline/spring&fall/fall.jpg">
+                <p>Original Tree in Fall</p>
+            </div>
+        </div>
+        <img src="media/spline/spring&fall/im1_blended_laplacian.jpg">
+        <img src="media/spline/spring&fall/im2_blended_laplacian.jpg">
+        <img src="media/spline/spring&fall/blended_laplacian.jpg">
+        <div class="images">
+            <div class="image-container">
+                <img src="media/spline/spring&fall/blended.jpg">
+                <p>Blended Tree in Spring and Fall</p>
+            </div>
+        </div>
+
+        <h4>Coffee and Lake in Desert (with irregular mask)</h4>
+        <p>I wanted to blend the lake in desert inside a cup of coffee. To do this, I need a ellipse shape mask, so I drew a image of black background and white ellipse. </p>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/spline/lake&coffee/coffee.jpeg">
+                <p>Original Coffee</p>
+            </div>
+            <div class="image-container">
+                <img src="media/spline/lake&coffee/lake.jpeg">
+                <p>Original Lake in Desert</p>
+            </div>
+            <div class="image-container">
+                <img src="media/spline/lake&coffee/mask.jpeg">
+                <p>Original Ellipse Mask</p>
+            </div>
+        </div>
+        <h4>Rescaling and Aligning</h4>
+        <p>To rescale and align the two images to be blended, I still used align code in Part 2.2, and cropped out the black edges after alignment. </p>
+        <img src="media/spline/lake&coffee/aligned_coffee&lake.jpg"> 
+        <p>Rescaling and aligning the mask with the image takes more time, because I want the mask to change its size and position according to the aligned images and aligned images should not change at all. 
+            The align code provided recenter both images and change sizes according to each other, so I cannot simply reuse that here. 
+        </p>
+        <p>Thus, I first used the provided code to get user input of the points in mask and aigned lake. Then, I rescale the mask using skimage.transform. After that, update p1 and p2 in the mask by rescaling. 
+            Next, I used transform.SimilarityTransform and transform.warp from skimage to align p1 in rescaled mask to p3 in aligned lake. Finally, crop the mask or padd with 0 to make it the same size as lake and coffee. 
+            Select one channel of the final mask and binarize to get a 2-D mask with 0 and 1 to start blending. </p>
+            <div class="images">
+                <div class="image-container">
+                    <img src="media/spline/lake&coffee/aligned_mask.jpg">
+                    <p>Final Mask</p>
+                </div>
+            </div>
+        <h4>Results</h4>
+        <p>With aligned images and mask, I can blended them in the same way as using regular masks. </p>
+        <img src="media/spline/lake&coffee/im1_blended_laplacian.jpg">
+        <img src="media/spline/lake&coffee/im2_blended_laplacian.jpg">
+        <img src="media/spline/lake&coffee/blended_laplacian.jpg">
+        <div class="images">
+            <div class="image-container">
+                <img src="media/spline/lake&coffee/blended.jpg">
+                <p>Blended Lake in Coffee</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Conclusion</h2>
+        <p>In this project, I learned a lot about how to use filters and frequencies to change the image. The coolest thing for me is hybriding images. 
+            It's really interesting to me that people's perception of "look closely" and "look from far away" can be manipulated through high and low frequencies, and I like it so much when I can hybrid cute pets together! </p>
+    </div>
+</body>
+</html>
