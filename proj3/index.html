@@ -1,0 +1,226 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CS180 Project 2 - Ruiqi Wang</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 80px;
+        }
+    </style>
+</head>
+<body>
+    <h1>CS180 Project 3</h1>
+    <h2>Face Morphing</h2>
+    <h3>by Ruiqi Wang</h3>
+    <div class="container">
+        <h2>Overview</h2>
+        <p>
+            In this project, I morphed my face into my friend's face using triangulations for shape change and using cross-dissolve and inverse warping for color change. 
+            In addition, I computed mean shape and mean face of female sample faces and male sample faces, and created a caricature of myself. 
+            Then I warped part of myself to the mean male face, which changed my gender and part of ethinity. 
+        </p>
+    </div>
+    <div class="container">
+        <h2>Part 1: Defining Correspondences</h2>
+        <h3>Preprocessing</h3>
+        <p>
+            I prepared a picture of myself, and a picture of my friend, both with no glasses, shutted mouth and white background. 
+            I cut the picture by hand to make them look roughly the same, then used python code to rescale and resize the images in order to have exactly same dimensions (1200, 900, 3).
+        </p>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/resized_wrq.jpg">
+                <p>Image of myself</p>
+            </div>
+            <div class="image-container">
+                <img src="media/resized_cln.jpg">
+                <p>Image of my friend</p>
+            </div>
+        </div>
+        <h3>Defining Correspondences</h3>
+        <p>
+            Using the tool provided on the website, I defined 67 pairs of correspondence points on the preprocessed images. 
+            The points represents the shape of our head, face, neck, ears, eyes, eyebrows, nose and mouth. 
+            Export the points in JSON file, then read them in the code as two numpy arrays. 
+            Add the 4 corners of the image as keypoints too, so I can capture the whole image. 
+        </p>
+        <h3>Triangulation</h3>
+        <p>
+            I computed the midway shape by taking the mean of the two arrays of keypoints. 
+            Then, compute a Delaunay triangulation on the midway shape for morphing, using function <i>Delaunay</i> from <i>scipy.spatial</i>. 
+            Delaunay triangulation does not produce overly skinny triangles, which is good for smooth morphing in following steps. 
+            Below is the facial keypoints and the triangulation I computed for the images. 
+        </p>
+        <img src="media/triagulation.png">
+    </div>
+
+
+    <div class="container">
+        <h2>Part 2: Computing the "Mid-way Face"</h2>
+        <h3>Approach</h3>
+        <p>
+            In order to compute the midway face, I need to find the midway shape, warp both faces into that shape, and average the colors together. 
+        </p>
+        <p>    
+            (1) The midway shape is easy to compute, just take the average of ImageA keypoints and ImageB keypoints. 
+        </p>
+        <p>
+            (2) Then, I used inverse warping to warp faces into the midway shape. I defined three helper functions, <i>computeAffine</i>, <i>bilinear_interpolation</i>, and <i>interpolate_rgb_channels</i>. <br>
+            &nbsp - <i>computeAffine</i> takes in two arrays, each containing 3 points representing a triangle. 
+            It stacks a row of 1 to triangle2, 
+            and uses np.linalg.solve to find and return a matrix representing the affine transform from triangle1 to the triangle2. <br>
+            &nbsp - <i>bilinear_interpolation</i> takes in the source image and floats x, y representing the computed pixel. 
+            The function finds the nearest 4 pixels around(x, y) and take the weighted average of the values from the four pixels. <br>
+            &nbsp - Since the images are colored, <i>interpolate_rgb_channels</i> divide image in to 3 color channels 
+            and calls <i>bilinear_interpolation</i> three times to interpolate each channel, and then stacks the channels back. 
+        </p>
+        <p>
+            With these helper functions, I defined the function <i>inverse_warp(image, src_tri, dst_tri, size, rr, cc)</i>. 
+            Here <i>image</i> is the sources image, <i>size</i> is the shape of it. <i>rr</i> and <i>cc</i> contain the location of all pixels inside the dst_tri. <br>
+            Firstly, use <i>computeAffine</i> to find the matrix for the transformation from destination triangle to the source triangle, which is an inverse transform. 
+            Then, apply the inverse matrix to the array of all pixels in destination matrix to get their positions in the source image. 
+            Lastly, use <i>interpolate_rgb_channels</i> to get the colors of the pixels. Create and return an empty image with the warped triangle colored. 
+        </p>
+        <p>
+            (3) In order to compute the midway face, I need to loop through all triangles and <i>inverse_warp</i> each triangle with imageA and imageB respectively, take the average color, and put the triangles in my destination image. 
+            Thus, I implemented the function <i>morph</i> suggested in next section here, with inputs <i>imageA, imageB, pointsA, pointsB, tri, warp_frac, dissolve_frac</i>. 
+            To compute the midway face, just set both <i>warp_frac</i> and <i>dissolve_frac</i> to be 0.5. 
+        </p>
+        <p>
+            In the function <i>morph</i>, firstly I computed intermediate shape, which is a weighted average of keypointsA and keypointsB. Initiate an empty image for the final result. 
+            <i>( weight is 1 - warp_frac for A and warp_frac for B)</i><br>
+            Then, loop through all triangles. For each triangle, find all pixels in the intermediate triangle using function <i>polygon from skimage.draw</i>, which gives <i>rr, cc</i>. 
+            use <i>inverse_warp</i> twice to find its color from A and B respectively, and take the weighted average of the colors. 
+            <i>( weight is 1 - dissolve_frac for A and dissolve_frac for B)</i><br>
+            Finally, replace pixels in the destination triangle in result image, which forms the whole image after we loop through every triangle. 
+        </p>
+        <h3>Problems</h3>
+        <p>
+            I met one problem in the very last step. In my initial implementation, I added the whole averaged warped image to the result image. 
+            This was fine for most pixels: the averaged warped image has colors in the triangle, and all zeros in other places, where as the result image has zero in the triangle. 
+            However, for pixels at the edge of different triangles, some white lines were formed. 
+            This was because those pixels were considered in both triangles, so they were added twice in this implementation. Then, their value exceeds 1 and formed white lines. <br>
+        
+            In order to solve this, I replace the triangle in the result image by the warped triangle. 
+            In this case, if an edge pixel is consider by more than one triangle, it will keep the value from the last triangle added to the image, so there will not be white lines. 
+        </p>
+
+        <h3>Result Mid-way Face</h3>
+        <img src="media/midway_face.png">
+    </div>
+
+
+    <div class="container">
+        <h2>Part 3: The Morph Sequence</h2>
+        <h3>Approach</h3>
+        <p>
+            I have already implemented function <i>morph</i> in Part 2, 
+            so the only thing left for Part 3 is to call <i>morph</i> with different <i>warp-frac</i> and <i>dissolve_frac</i> to create a sequence of intermediate images. 
+            I looped through 0 to 44 frames, with ith frame having <i>warp-frac = dissolve_frac = i / 44</i>, and created a morph sequence.
+        </p>
+        <h3>Result: </h3>
+        <a href="https://youtube.com/shorts/IDJAu7f85t8?feature=share">Youtube video link</a>
+        <img src="media/wrq_to_cln.gif">
+    </div>
+
+
+    <div class="container">
+        <h2>Part 4: The "Mean face" of a Population</h2>
+        <p>I used Danes dataset, and divided the sample faces into two populations: male and female. </p>
+        <p>(1) Compute the average shape</p>
+        <p>
+            I implemented a helper function <i>read_asf_file</i> to read in the keypoints as numpy array from .asf files. 
+            Then I used os.listdir(folder_path) to read all .asf files and take the average of keypoints to form the average shape. 
+        </p>
+        <p>(2) Morph sample images to average shape</p>
+        <p>
+            This is similar to function <i>morph</i> in previous part. 
+            I implemented function <i>morph_to_average_shape(image, keypoints, average_shape, tri)</i> , 
+            in which I looped through each triangle and used <i>inverse_warp</i> to extract the color of each triangles from the source image. Below are some samples: 
+        </p>
+
+        <div class="images">
+            <div class="image-container">
+                <img src="media/sample_female.png">
+                <p>Some Samples from Female population</p>
+            </div>
+            <div class="image-container">
+                <img src="media/sample_male.png">
+                <p>Some Samples from Male population</p>
+            </div>
+        </div>
+
+        <p>(3) Compute the average face of the population</p>
+        <p>I morphed each sample image into the average shape, and take the average of all the morphed images in the population. 
+            Below are the average female face and average male face: 
+        </p>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/average_female_face.jpg">
+                <p>Average Female Face</p>
+            </div>
+            <div class="image-container">
+                <img src="media/average_male_face.jpg">
+                <p>Average Male Face</p>
+            </div>
+        </div>
+        <p>
+            Then, I resized and padded the image of myself to have same dimensions as the sample images. 
+            I plotted the keypoints of the sample images, and used the provided tool to take correspondent keypoints on myself. <br>
+            Below are my face warped into the average female shape and the average female face warped into my shape. 
+        </p>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/me_to_female_average.jpg">
+                <p>My Face warped into Average Female Shape</p>
+            </div>
+            <div class="image-container">
+                <img src="media/female_average_to_me.jpg">
+                <p>Average Female Face warped into My Face Shape</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h3>Part 5: Caricatures: Extrapolating from the Mean</h3>
+        <h4>Approach</h4>
+        <p>
+            To make a caricature of myself, I found the difference between my keypoints and average_female_shape, 
+            and add alpha * difference back to my keypoints to get the caricature shape. Then, morph my face into caricature shape. <br>
+            Below are my face morphed into caricature shapes with difference alpha: 
+        </p>
+        <img src="media/caricatures.png">
+    </div>
+
+    <div class="container">
+        <h3>Bells and Whistles: Change Gender and Ehinicity of My Face </h3>
+        <h4>Approach</h4>
+        <p>
+            I used the average male face I computed in previous parts. 
+            I defined 58 pairs of correspondence points between my face and average male face, 
+            and used function <i>morph</i> I defined in part 3 with different warp_frac and dissolve_frac. 
+            Since the samples used to compute average male face are mostly white, and I am asian, I changed both my gender and my ethnicity. <br>
+            Below are the results of morphing just the shape, just the appearance, and both. 
+        </p>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/80% male_shaped_me.jpg">
+                <p>Morph just the shape <i>(warp_frac = 0.8)</i></p>
+            </div>
+            <div class="image-container">
+                <img src="media/80% male_colored_me.jpg">
+                <p>Morph just the appearance <i>(dissolve_frac = 0.8)</i></p>
+            </div>
+            <div class="image-container">
+                <img src="media/male_me.jpg">
+                <p>Morph both shape and appearance</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
