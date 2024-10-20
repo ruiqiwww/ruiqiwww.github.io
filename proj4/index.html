@@ -1,0 +1,302 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CS180 Project 4 - Ruiqi Wang</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 80px;
+        }
+    </style>
+</head>
+<body>
+    <h1>CS180 Project 4</h1>
+    <h1>[Auto]Stitching Photo Mosaics</h1>
+    <h3>by Ruiqi Wang</h3>
+
+    <h2>Part A: Image Warping and Mosaicing</h2>
+    <div class="container">
+        <h2>Overview</h2>
+        <p>
+            In the first part of project 4, I took pictures with a fixed center of projection and rotated my cameras. 
+            Then, I recovered linear homographies and warp images according to that, and blend warped images together into a mosaic. 
+        </p>
+    </div>
+    <div class="container">
+        <h2>Part 1: Shoot the Pictures</h2>
+        <h3>Preprocessing</h3>
+        <p>I rezied the images to have a proper size to avoid long runtime for the following part. </p>
+        <p>
+            I took 3 groups of pictures: <br>
+            (1) buildings scene from my balcony<br>
+            (2) the door of my apartment<br>
+            (3) Minecraft views<br> 
+        </p>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/resized_left.jpeg">
+            </div>
+            <div class="image-container">
+                <img src="media/resized_middle.jpeg">
+                <p>Images of buildings</p>
+            </div>
+            <div class="image-container">
+                <img src="media/resized_right.jpeg">
+            </div>
+        </div>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/resized_up.jpeg">
+            </div>
+            <div class="image-container">
+                <img src="media/resized_door.jpeg">
+                <p>Images of the door</p>
+            </div>
+            <div class="image-container">
+                <img src="media/resized_down.jpeg">
+            </div>
+        </div>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/resized_mc_left.jpg">
+            </div>
+            <div class="image-container">
+                <img src="media/resized_mc_middle.jpg">
+                <p>Images from Minecraft</p>
+            </div>
+            <div class="image-container">
+                <img src="media/resized_mc_right.jpg">
+            </div>
+        </div>
+    </div>
+
+
+    <div class="container">
+        <h2>Recover Homographies</h2>
+        <h3>Defining Correspondences</h3>
+        <p>
+            I used the tool provided in project 3 to manually define correspondence points. The points spread out the whole image. 
+        </p>
+        <h3>Compute the Homography matrix</h3>
+        <p>Given a set of correspondence points:</p>
+        <ul>
+            <li>(<i>x</i>, <i>y</i>) in image 1</li>
+            <li>(<i>x'</i>, <i>y'</i>) in image 2</li>
+        </ul>
+        <p>The homography equation is:</p>
+        <div class="equation">
+            <mi>&#91;</mi><mi>x'</mi><mo>,</mo><mi>y'</mi><mo>,</mo><mn>1</mn><mi>&#93;</mi>
+            <mo>=</mo>
+            <mi>H</mi>
+            <mi>&#91;</mi><mi>x</mi><mo>,</mo><mi>y</mi><mo>,</mo><mn>1</mn><mi>&#93;</mi>
+        </div>
+        <p>These can be rearranged to:</p>
+        <div class="equation">
+            <math>
+                <mrow>
+                    <mi>h1</mi><mi>x</mi><mo>+</mo><mi>h2</mi><mi>y</mi><mo>+</mo><mi>h3</mi>
+                    <mo>-</mo><mi>x'</mi><mo>(</mo><mi>h7</mi><mi>x</mi><mo>+</mo><mi>h8</mi><mi>y</mi><mo>+</mo><mn>1</mn><mo>)</mo>
+                    <mo>=</mo><mn>0</mn>
+                </mrow>
+                <mrow>
+                    <mi>h4</mi><mi>x</mi><mo>+</mo><mi>h5</mi><mi>y</mi><mo>+</mo><mi>h6</mi>
+                    <mo>-</mo><mi>y'</mi><mo>(</mo><mi>h7</mi><mi>x</mi><mo>+</mo><mi>h8</mi><mi>y</mi><mo>+</mo><mn>1</mn><mo>)</mo>
+                    <mo>=</mo><mn>0</mn>
+                </mrow>
+            </math>
+        </div>
+        <p>Each point pair (<i>x, y</i>) and (<i>x', y'</i>) generates two equations:</p>
+        <div class="equation">
+            <p>For the first equation:</p>
+            <math>
+                <mi>[h1, h2, h3, h4, h5, h6, h7, h8]</mi>
+                <mo>&middot;</mo>
+                <mi>[-x, -y, -1, 0, 0, 0, x'x, x'y, x']</mi>
+                <mo>=</mo><mn>0</mn>
+            </math>
+            <p>For the second equation:</p>
+            <math>
+                <mi>[h1, h2, h3, h4, h5, h6, h7, h8]</mi>
+                <mo>&middot;</mo>
+                <mi>[0, 0, 0, -x, -y, -1, y'x, y'y, y']</mi>
+                <mo>=</mo><mn>0</mn>
+            </math>
+        </div>
+        <p>Thus, I build up a linear equation system to solve for the 8 unknowns for H using SVD and computed H.</p>
+    </div>
+
+
+    <div class="container">
+        <h2>Part 3: Warp the Images</h2>
+        <h3>Approach</h3>
+        <p>
+            Before warping the images according to the homography matrix computed in part 2, 
+            I added a alpha channel for the unwarped image: 
+            I set it to 1 at the center of each (unwarped) image and made it fall off linearly until it hits 0 at the edges. 
+            This alpha channel helps to identify the pixels that are not "painted" after warping, 
+            and can be used for weighted average when blending the images into a mosaic. 
+        </p>
+        <p>    
+            Then, I computed the output shape of warped image. 
+            If not specified, I warp the corners of original image and transform them using the homography. 
+            Then, find minimum and maximum coordinates in x and y directions, and take the difference between them as the output window size. 
+        </p>
+        <p>
+            Finally, I used inverse warping to paint the warped image. I take all pixels i output window, 
+            add the offsets(min_x, min_y if offsets are not specified), and compute their corresponding location in the original image. 
+            Then, use scipy.interpolate.griddata to interpolate all 4 channels(R, G, B and alpha channel) and paint the pixels in a vectorized way. 
+            The function returns the warped image with 4 channels. 
+        </p>
+    </div>
+
+
+    <div class="container">
+        <h2>Part 3: Image Rectification</h2>
+        <h3>Approach</h3>
+        <p>
+            I got two examples, my keyboard and my notebook. I used the correspondence point tool to get the 4 corner points of each image. 
+            Then I manually made an array of the 4 corners of a sqaure, and expand the sqaure according to the height and width of the image "rectangle". 
+            Finally, use computeH and warpImage functions defined in previous parts to warp the object in the image to be a rectangle. 
+        </p>
+        <h3>Result: </h3>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/resized_notebook.jpeg">
+                <p>Original Notebook</p>
+            </div>
+            <div class="image-container">
+                <img src="media/rectified_notebook.jpg">
+                <p>Rectified Notebook</p>
+            </div>
+        </div>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/resized_keyboard.jpeg">
+                <p>Original Keyboard</p>
+            </div>
+            <div class="image-container">
+                <img src="media/rectified_keyboard.jpg">
+                <p>Rectified Keyboard</p>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="container">
+        <h2>Part 4: Blend the images into a mosaic</h2>
+        <h3>Approach</h3>
+        <p>(1) Compute the output shape</p>
+        <p>Firstly, I need to compute the size for the mosaic. To do this, I iterate over all images and transform their corners, 
+            and then find the maximum and minimum in x and y directions of all corners. 
+            If min_x or min_y goes lower than 0, there should be a universal translation on all images to avoid cutting those parts. 
+            After that, the difference between maximum and minimum plus the potential universal translation should be the size of the result mosaic. 
+        </p>
+        <p>(2) Warp each image to the target image</p>
+        <p>
+            I used computeH to compute the homography for each image using their correspondence points. There should be one image who needs no transform, whose homography should be the identity matrix. 
+            Then, add the universal translation computed before to the homography to let the correspondence points align in the final mosaic. 
+            warp the image respectively using warImage with the computed mosaic shape. 
+        </p>
+        <p>(3) Blend the warped images together</p>
+        <p>
+            I used the extra alpha channel returned by warpImage to blend the warped images.
+            Use warped alpha value as weight for each pixel, and record the sum of alpha values to calculate a weighted average in R,G,B channels. 
+            Finally, remove the alpha channel after blending.
+        </p>
+        <h3>Result for buildings</h3>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/resized_left.jpeg">
+            </div>
+            <div class="image-container">
+                <img src="media/resized_middle.jpeg">
+                <p>Original images of buildings</p>
+            </div>
+            <div class="image-container">
+                <img src="media/resized_right.jpeg">
+            </div>
+        </div>
+        
+        <div class="images">
+            <div class="image-container">
+                <img src="media/warped_left_building.jpg">
+                <p>Warped Left</p>
+            </div>
+            <div class="image-container">
+                <img src="media/resized_middle.jpeg">
+                <p>Middle image (Unwarped)</p>
+            </div>
+            <div class="image-container">
+                <img src="media/warped_right_building.jpg">
+                <p>Warped Right</p>
+            </div>
+        </div>
+        <img src="media/building_mosaic.jpg">
+
+        <h3>Result for the door (Vertical mosaic)</h3>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/resized_up.jpeg">
+            </div>
+            <div class="image-container">
+                <img src="media/resized_door.jpeg">
+                <p>Original mages of the door</p>
+            </div>
+            <div class="image-container">
+                <img src="media/resized_down.jpeg">
+            </div>
+        </div>
+        
+        <div class="images">
+            <div class="image-container">
+                <img src="media/warped_up.jpg">
+                <p>Warped Up</p>
+            </div>
+            <div class="image-container">
+                <img src="media/resized_door.jpeg">
+                <p>Middle image (Unwarped)</p>
+            </div>
+            <div class="image-container">
+                <img src="media/warped_down.jpg">
+                <p>Warped Down</p>
+            </div>
+        </div>
+        <img src="media/door_mosaic.jpg">
+
+        <h3>Result for Minecraft Images</h3>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/resized_mc_left.jpg">
+            </div>
+            <div class="image-container">
+                <img src="media/resized_mc_middle.jpg">
+                <p>Original images from Minecraft</p>
+            </div>
+            <div class="image-container">
+                <img src="media/resized_mc_right.jpg">
+            </div>
+        </div>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/warped_mcleft.jpg">
+                <p>Warped Left</p>
+            </div>
+            <div class="image-container">
+                <img src="media/resized_mc_middle.jpg">
+                <p>Middle image (Unwarped)</p>
+            </div>
+            <div class="image-container">
+                <img src="media/warped_mcright.jpg">
+                <p>Warped Right</p>
+            </div>
+        </div>
+        <img src="media/mc_mosaic.jpg">
+    </div>
+
+    
+</body>
+</html>
