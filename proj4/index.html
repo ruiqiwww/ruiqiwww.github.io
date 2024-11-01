@@ -297,6 +297,179 @@
         <img src="media/mc_mosaic.jpg">
     </div>
 
+    <h2>Part B: FEATURE MATCHING for AUTOSTITCHING</h2>
+    <div class="container">
+        <h2>Overview</h2>
+        <p>
+            In the second part of project 4, I find Harris corners, compute descriptors, and match features automatically to find the best homography. 
+            This enables automatic keypoints detection and matching, which can be used for producing mosaic. 
+        </p>
+    </div>
+
+    <div class="container">
+        <h2>Step 1: Harris Interest Point Detector</h2>
+        <h3>Appoach</h3>
+        <p>I reused resized images from part A. I read the images in using cv2, saved a gray-scaled version for harris Interest point detection, 
+            and saved a RGB format for future mosaic. 
+            Using the <i>get_harris_corners</i> function provided, I adjusted sigma and min_dis to be 2 to avoid too many coordinate points (My image is large), 
+            and then I got the following results:  </p>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/building_corners1.png">
+                <p>Image 1</p>
+            </div>
+            <div class="image-container">
+                <img src="media/building_corners2.png">
+                <p>Image 2</p>
+            </div>
+        </div>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/door_corners1.png">
+                <p>Image 1</p>
+            </div>
+            <div class="image-container">
+                <img src="media/door_corners2.png">
+                <p>Image 2</p>
+            </div>
+        </div>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/mc_corners1.png">
+                <p>Image 1</p>
+            </div>
+            <div class="image-container">
+                <img src="media/mc_corners2.png">
+                <p>Image 2</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Step 2: Adaptive Non-Maximal Suppression</h2>
+        <h3>Appoach</h3>
+        <p>Too filter out points that are not corners, I used adaptive non-maximal suppression algorithm as described in the paper.  
+            Firstly, I precomputed pairwise distances between all corners for future use to make the function efficient. 
+            Then, initialize r to be inf. Iterate over each corner to find the minimum distance to a stronger corner, 
+            which means I update r[i] when there's a strong corner that is closer than current r[i]. 
+            Finally, sort the points according to its r, descending, and select the top 500 points to remain. 
+        </p>
+        <p>Here's my results: </p>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/building_anms1.png">
+                <p>Image 1</p>
+            </div>
+            <div class="image-container">
+                <img src="media/building_anms2.png">
+                <p>Image 2</p>
+            </div>
+        </div>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/door_anms1.png">
+                <p>Image 1</p>
+            </div>
+            <div class="image-container">
+                <img src="media/door_anms2.png">
+                <p>Image 2</p>
+            </div>
+        </div>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/mc_anms1.png">
+                <p>Image 1</p>
+            </div>
+            <div class="image-container">
+                <img src="media/mc_anms2.png">
+                <p>Image 2</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Step 3: Feature Descriptor Extraction and Matching</h2>
+        <h3>Feature Descriptor Extraction</h3>
+        <p>
+            For each selected keypoint, extract a 40*40 patch around it, and resize it to be 8*8. Normalize the 8*8 subimage and flatten it to be a descriptor. 
+        </p>
+        <h3>Feature Descriptor Matching</h3>
+        <p>
+            To make the function more efficient, precompute the distance matrix containing the pairwise Euclidean distances between descriptors. 
+            Then, for each descriptor for image1, find the two nearest neighbors in descriptors2, and compute the Lowe's ratio. 
+            Lowe's ratio is 1-NN / 2-NN. If the 1-NN meets the threshold, add it to be a match. 
+        </p>
+        <h3>Results: </h3>
+        <img src="media/building_match.png">
+        <img src="media/door_matches.png">
+        <img src="media/mc_matches.png">
+    </div>
+
+    <div class="container">
+        <h2>Step 4: RANSAC</h2>
+        <h3>Approach</h3>
+        <p>
+            After matching, there are still some outliers. So I implemented RANSAC to further filter out incorrect matchings. 
+        </p>
+        <p>
+            To do RANSAC, each time I randomly pick out 4 matching pairs and compute homography according to them. 
+            Then, compute all keypoints1 using that H and check the result with keypoints2: for each point, if difference is small, it's a inliner with this homography. 
+            Through the loop, we keep the largest set of inliners. 
+            Finally, we compute the best homography using the largest set of inliners. 
+        </p>
+        <h3>Results: </h3>
+        <img src="media/building_ransac.png">
+        <img src="media/door_ransac.png">
+        <img src="media/mc_ransac.png">
+    </div>
+
+    <div class="container">
+        <h2>Step 5: Automatic Mosaic</h2>
+        <p>
+            With the automatically computed homography, I can warp images and make mosaic just like part A. Here are my results: 
+        </p>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/auto_building_mosaic.jpg">
+                <p>Auto</p>
+            </div>
+            <div class="image-container">
+                <img src="media/manual_building_mosaic.jpg">
+                <p>Manual</p>
+            </div>
+        </div>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/auto_door_mosaic.jpg">
+                <p>Auto</p>
+            </div>
+            <div class="image-container">
+                <img src="media/manual_door_mosaic.jpg">
+                <p>Manual</p>
+            </div>
+        </div>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/auto_mc_mosaic.jpg">
+                <p>Auto</p>
+            </div>
+            <div class="image-container">
+                <img src="media/manual_mc_mosaic.jpg">
+                <p>Manual</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>What have I learned? </h2>
+        <p>
+            The coolest thing I learned from the project is that, sometime we can think of things reversely. 
+            When warping images, inverse warping is more efficient because we get all pixels we need; 
+            When trying to filter outliers in the automatic matches, we loop over and over to keep the most inliers. It's very cool to think same thing in different directions. 
+        </p>
+    </div>
+
+
     
 </body>
 </html>
