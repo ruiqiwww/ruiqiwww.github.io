@@ -1,0 +1,44 @@
+.container {
+    margin-top: 20px;
+    margin-bottom: 20px;
+    justify-content: center;
+    
+    
+}
+
+.container img {
+    max-width: 100%; 
+    height: auto;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    
+}
+
+
+.images {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 15px;
+}
+
+.image-container {
+    flex: 1;
+    text-align: center;
+    justify-content: center;
+    min-width: 150px; 
+    max-width: 400px;
+    margin: 5px;
+}
+
+.image-container img {
+    width: 100%;
+    height: auto; 
+}
+
+.image-container p {
+    margin-top: 0px;
+}
+
+

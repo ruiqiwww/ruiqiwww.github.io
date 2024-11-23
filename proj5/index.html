@@ -1,0 +1,536 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CS180 Project 5 - Ruiqi Wang</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 80px;
+        }
+    </style>
+</head>
+<body>
+    <h1>CS180 Project 5</h1>
+    <h1>Fun With Diffusion Models</h1>
+    <h3>by Ruiqi Wang</h3>
+
+    <h2>Part A: The Power of Diffusion Models</h2>
+    <div class="container">
+        <h2>Overview</h2>
+        <p>
+            In the first part of project 5, I denoise random images to actual meaningful images through various algorithm. 
+            This allow me to generate images as prompted from random noise. 
+        </p>
+    </div>
+    <div class="container">
+        <h2>1.1 Forward Process</h2>
+        <p>
+            The forward process takes in a clean image and adds noise to it. 
+            At timestep t, I get a noisy imaage by scaling the clean image by sqrt(alpha_cumprod_t) and adding sqrt(1-alpha_cumprod_t) * noise. 
+        </p>
+        <h3>
+            Test images at noise level [250, 500, 700]
+        </h3>
+        <img src="media/A1.1.png">
+    </div>
+
+    <div class="container">
+        <h2>1.2 Classical Denoising: Gaussian blur filtering</h2>
+        <p>
+            For each noisy test images, I applied gaussian blur filtering to  try to denoise them. 
+            The results are not very satisfying: the random color noise are still there, and Campanile is very blurred. 
+        </p>
+        <h3>
+            Gaussian blur denoised test images at noise level [250, 500, 700]
+        </h3>
+        <img src="media/A1.2.png">
+    </div>
+
+    <div class="container">
+        <h2>1.3 One-Step Denoising</h2>
+        <p>
+            Since Classical Gaussian blur denoising cannot give us good results, we use a diffusion model for denoising. 
+            Using the prompt "a high quality photo", estimate the noise for noisy image at timestep t and remove the estimated noise. 
+            The results are much better than gaussian blurred ones, but when t gets larger, one-step denoising gives result that are not our original image. 
+        </p>
+        <h3>
+            One-step denoised test images at noise level [250, 500, 700]
+        </h3>
+        <img src="media/A1.3.png">
+    </div>
+
+    <div class="container">
+        <h2>1.4 Iterative Denoising</h2>
+        <p>
+            In order to achieve better denoising, I denoise the image iteratively, with each stride of 30 timesteps. 
+        </p>
+        <p>
+            During each iterative step, I first fetch alpha_cumprod at t and t-1, then calculate alpha and beta at t.
+            Then, I used the UNET to estimate noise as in one-step denoising. Then, estimate x_0 using current x_t by x_0 = (x_t - sqrt(1 - alpha_cumprod) * noise_est) / sqrt(alpha_cumprod)
+            Next, update the noisy image x_t to be sqrt(alpha_cumprod_prev) * beta / (1 - alpha_cumprod) * x_0 + sqrt(alpha) * (1 - alpha_cumprod_prev) / (1 - alpha_cumprod) * x_t, 
+            and add predicted variance by UNET.
+            Finally pass it into next iteration. 
+        </p>
+        
+        <h3>
+            Interatively Denoising Process
+        </h3>
+        <img src="media/A1.4_interative_process.png">
+        <h3>
+            Iterative Denoising V.S. One-Step Denoising V.S. Gaussian Blur Denoising
+        </h3>
+        <img src="media/A1.4compare.png">
+        <p>Iterative denoising give the best result that is similar to original clean image. </p>
+    </div>
+
+    <div class="container">
+        <h2>1.5 Diffusion Model Sampling</h2>
+        <p>
+            Using the iterative diffusion model in 1.4, I can generate meaningful images from scratch. To do this, generate a random pure noise and "denoise" it to be an image. 
+        </p>
+        <h3>
+            Diffusion model sampling results with prompt "a high quality photo"
+        </h3>
+        <img src="media/A1.5.png">
+        <p>The result for this default prompt is not very good, and the images are quite blurred. Prompts with a specific object perform better. </p>
+        <h3>
+            Diffusion model sampling results with prompt "a photo of a man"
+        </h3>
+        <img src="media/A1.5man.png">
+    </div>
+
+    <div class="container">
+        <h2>1.6 Classifier-Free Guidance (CFG)</h2>
+        <p>
+            The results from 1.5 are usually very blurred and sometimes are not a specific thing but just some colors. 
+            In order to generate images with better quality, I implemented CFG as introduced. 
+        </p>
+        <p>
+            Every step is the same as in 1.5 iterative denoising, except the way I estimate the noise. 
+            While estimating the noise of x_t, I used the UNET twice to estimate two noises: conditional noise with the specific prompt and unconditional noise with the default prompt. 
+            Then, I came up with a guided_noise_est = uncond_noise_est + scale * (noise_est - uncond_noise_est), which combines both noise with scale = 7. 
+        </p>
+        <p>The results are significantly better than withou CFG. </p>
+        <h3>
+            CFG Diffusion model sampling results with prompt "a high quality photo"
+        </h3>
+        <img src="media/A1.6.png">
+        
+        <h3>
+            CFG Diffusion model sampling results with prompt "a photo of a man"
+        </h3>
+        <img src="media/A1.6man.png">
+    </div>
+
+    <div class="container">
+        <h2>1.7 Image-to-image Translation</h2>
+        <p>
+            To do an Image-to-image translation, I took a clean image, and add different levels of noise to it. 
+            Then, I took the noisy image as my starting image and do a iterative denoising with cfg to it. 
+            This would lead to some "creative" edits to the image, and gives us a clean image that is not completely same as the original clean image. 
+            In fact, the larger the noise level, denoised image and original image would be more different. 
+        </p>
+        <p>I used the provided code to download web images and preprocess them. </p>
+        <h3>Original Images</h3>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/A1.7.2_cpnl_orig.png">
+                <p>Original Campanile</p>
+            </div>
+            <div class="image-container">
+                <img src="media/A1.7.2_tree_orig.png">
+                <p>Original Christmas Tree</p>
+            </div>
+            <div class="image-container">
+                <img src="media/A1.7.2_cake_orig.png">
+                <p>Original JellyCat Cake</p>
+            </div>
+        </div>
+        <h3>
+            Results for Campanile
+        </h3>
+        <img src="media/A1.7_0.png">
+        
+        <h3>
+            Results for A Christmas Tree
+        </h3>
+        <img src="media/A1.7_tree.png">
+
+        <h3>
+            Results for a JellyCat Cake
+        </h3>
+        <img src="media/A1.7_cake.png">
+    </div>
+
+    <div class="container">
+        <h2>1.7.1 Editing Hand-Drawn and Web Images</h2>
+        <p>
+            Following the same procedure as above, I can bring hand-drawn images and cartoon images into real world. 
+            I can denoise the un-real images and denoise it to edit its contents. 
+        </p>
+        <p>The larger the noise level is(smaller start_i), the more edits shall be made by the model. When noise level is small, results are similar to original image; when noise level is large, the results are more different to original image. </p>
+        <h3>Web Image: Mickey Mouse</h3>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/A1.7.1_mickey_original.png">
+                <p>Original Mickey Mouse</p>
+            </div>
+        </div>
+        <h3>Result for Mickey Mouse</h3>
+        <img src="media/A1.7.1_mickey.png">
+        <h3>Hand-Drawn Images: Cat and Flower</h3>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/A1.7.1_cat_original.png">
+                <p>Original Cat</p>
+            </div>
+            <div class="image-container">
+                <img src="media/A1.7.1_flower_original.png">
+                <p>Original Flower</p>
+            </div>
+        </div>
+        <h3>Result for Cat</h3>
+        <img src="media/A1.7.1_cat.png">
+        <h3>Result for Flower</h3>
+        <img src="media/A1.7.1_flower.png">
+    </div>
+    
+    <div class="container">
+        <h2>1.7.2 Inpainting</h2>
+        <p>
+            To do an Inpainting, I follow the same procedure as the above except that I have another mask. 
+            I took a clean image, and add different levels of noise to it. 
+            Then, I took the noisy image as my starting image and do a iterative denoising with cfg to it. 
+        <p>In each iterative denoising step, after I got x_t-1, I force it by the mask that, only the selected parts of the image will change, and other parts will stay the same as noisy_image at timestep t</p>
+            This would lead to some "creative" edits to the image, but the changes are limited to the portion indicated by the mask. 
+        </p>
+        <p>I used the prompt "a high quality photo" for all following results. </p>
+
+        <h3>Campanile</h3>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/A1.7.2_cpnl_orig.png">
+                <p>Original Campanile</p>
+            </div>
+            <div class="image-container">
+                <img src="media/A1.7.2_cpnl_mask.png">
+                <p>Mask</p>
+            </div>
+            <div class="image-container">
+                <img src="media/A1.7.2_cpnl_replace.png">
+                <p>Mask on Image</p>
+            </div>
+            <div class="image-container">
+                <img src="media/A1.7.2_cpnl_inpainted.png">
+                <p>Inpainted Campanile</p>
+            </div>
+        </div>
+
+        <h3>Christmas Tree</h3>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/A1.7.2_tree_orig.png">
+                <p>Original Christmas Tree</p>
+            </div>
+            <div class="image-container">
+                <img src="media/A1.7.2_tree_mask.png">
+                <p>Mask</p>
+            </div>
+            <div class="image-container">
+                <img src="media/A1.7.2_tree_replace.png">
+                <p>Mask on Image</p>
+            </div>
+            <div class="image-container">
+                <img src="media/A1.7.2_tree_inpainted.png">
+                <p>Inpainted Christmas Tree</p>
+            </div>
+        </div>
+
+        <h3>JellyCat Cake</h3>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/A1.7.2_cake_orig.png">
+                <p>Original JellyCat Cake</p>
+            </div>
+            <div class="image-container">
+                <img src="media/A1.7.2_cake_mask.png">
+                <p>Mask</p>
+            </div>
+            <div class="image-container">
+                <img src="media/A1.7.2_cake_replace.png">
+                <p>Mask on Image</p>
+            </div>
+            <div class="image-container">
+                <img src="media/A1.7.2_cake_inpainted.png">
+                <p>Inpainted JellyCat Cake</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>1.7.3 Text-Conditional Image-to-image Translation</h2>
+        <p>
+            To do a text-conditinal image-to-image translation, simply follow the same procedure, and change the imput prompt to be some other texts. 
+        </p>
+        <h3>
+            Results for Campanile with prompt "a rocket ship"
+        </h3>
+        <img src="media/A1.7.3_cpnl_to_rocket.png">
+        
+        <h3>
+            Results for Christmas Tree with prompt "a rocket ship"
+        </h3>
+        <img src="media/A1.7.3_tree_to_rocket.png">
+
+        <h3>
+            Results for JellyCat Cake with prompt "an oil painting of a snowy mountain village"
+        </h3>
+        <img src="media/A1.7.3_cake_village.png">
+    </div>
+
+    <div class="container">
+        <h2>1.8 Visual Anagrams</h2>
+        <p>
+            In this part, I want to create an image that looks like prompt1 normally and looks like prompt2 upside down. 
+            To do this, reuse the iterative denoising model with cfg, and change the estimated noise in each iterative step: 
+        </p>
+        <p> First, use prompt1 on normal image to get estimated noise1, and apply cfg to it; </p>
+        <p>
+            Then flip the image, use prompt2 on flipped image to get estimated noise2, and apply cfg to it. 
+            Note that here, unconditional prompt should also be used on flipped image. 
+            After cfg, flip the guided noise2 back. 
+        </p>
+        <p>Finally, the combined estimated noise should be the average of these two noises. Use the combined noise in the iterative step as before to get an anagram. </p>
+        <h3>
+            Results: 
+        </h3>
+        <img src="media/A1.8_man&fire.png">
+        <img src="media/A1.8_rocket_pencil.png">
+        <img src="media/A1.8_dog_man.png">
+        
+    </div>
+
+    <div class="container">
+        <h2>1.9 Hybrid Images</h2>
+        <p>
+            In this part, I want to create an image that looks like prompt1 from far away and looks like prompt2 closely. 
+            To do this, reuse the iterative denoising model with cfg, and change the estimated noise in each iterative step: 
+        </p>
+        <p> First, use prompt1 on the image to get estimated noise1, and apply cfg to it, then pass it into a low pass filter(Gaussian); </p>
+        <p>
+            Then, use prompt2 on the image to get estimated noise1, and apply cfg to it, then pass it into a high pass filter(image - Gaussian(image));
+        </p>
+        <p>Finally, sum up the two noises to get the combined estimated noise. Use the combined noise in the iterative step as before to get a hybrid. </p>
+        <h3>
+            Results: 
+        </h3>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/A1.9_skull_waterfall.png">
+                <p>Skull & Waterfalls</p>
+            </div>
+            <div class="image-container">
+                <img src="media/A1.9_rocket_snowy.png">
+                <p>Rocket & Snowy Village</p>
+            </div>
+            <div class="image-container">
+                <img src="media/A1.9_skull_fire.png">
+                <p>Skull & People around Campfire</p>
+            </div>
+            
+        </div>
+    </div>
+    
+
+    <h2>Part B: Diffusion Models from Scratch</h2>
+    <div class="container">
+        <h2>Part 1: Training a Single-Step Denoising UNet</h2>
+        <h3>1.1 Implementing the UNet</h3>
+        <h3>Implementing Simple and Composed Ops</h3>
+        <p>
+            For each standard tensor operations, I used nn.Seuquential() in its __init__ function to build a sequence of baisc operations as described, and call them in forward() function. 
+        </p>
+        <h3>Implementing Unconditional UNet</h3>
+        <p>
+            In __init__ function, I initiate all required simple operation objects according to the design graph. In foward(), I use the operation objects in order to get final result.  
+        </p>
+        <h3>1.1 Using the UNet to Train a Denoiser</h3>
+        <h3>Generating datasets</h3>
+        <p>
+            To load batches of clean images from MNIST dataset and generate corresponding noisy images, I implemented helper functions load_mnist(train=True, batch_size=256, shuffle=True) and add_gaussian_noise(images, sigma=0.5). 
+            load_mnist returns a DataLoader that loads a batch of clean images of size = batch_size. add_gaussian_noise add noise * sigma to the clean image x and returns the noisy image z, (z, x) can be used for training. 
+        </p>
+        <h3>Visualization of Noising Process: </h3>
+        <img src="media/B1.2_noising.png">
+
+        <h3>1.2.1 Training</h3>
+        <p>
+            Dataset and dataloader: Used load_mnist to load training data with batch size of 256. Train for 5 epochs. 
+        </p>
+        <p>
+            Model: Use dthe UNet hidden dimension D = 128.
+        </p>
+        <p>
+            Optimizer: Use Adam optimizer with learning rate of 1e-4.
+        </p>
+        <p>
+            For each training batch, use add_gaussian_noise with sigma=0.5 to get noisy images z. 
+            Run forward process and back process, then record the loss for the batch. 
+        </p>
+        <p>
+            After each epoch, record the model to drive for backup, and visualize after epoch 1 and epoch 5
+        </p>
+        <h3>Training Loss Curve</h3>
+        <img src="media/B1.2.1_training_loss.png">
+        <h3>Epoch 1</h3>
+        <img src="media/B1.2.1_epoch1.png">
+        <h3>Epoch 5</h3>
+        <img src="media/B1.2.1_epoch5.png">
+        
+
+        <h3>1.2.2 Out-of-Distribution Testing</h3>
+        <p>
+            The model is trained with sigma = 0.5. Sample some images and noise them by different sigma values. The model's performance is not very good for these out of distribution samples. 
+        </p>
+        <img src="media/B1.2.2_testing.png">
+
+    </div>
+
+    <div class="container">
+        <h2>Part 2: Training a Diffusion Model</h2>
+        <p>
+            Now, instead of prediction the clean image directly, I train a model to predict the noise, which then helps me to denoise the image. Here, use iterative denoising as in partA. 
+        </p>
+        
+        
+        <h3>Other helper functions</h3>
+        <p>
+            First, I defined a helper function to generate betas, alphas and alphas_cumprod. Given beta_0 and beta_T, generate betas between them with equal difference. 
+            Then, alpha = 1-beta and alpha_cumprod as the cumulative product of alphas. 
+        </p>
+        <p>
+            Also, I defined a helper function add_noise_with_t(x0, t, alpha_cumprod), which generate a noise, compute x_t as equation A.2, and return x_t and noise. 
+        </p>
+        <h3>2.1 Adding Time Conditioning to UNet</h3>
+        <h3>Implementing FCBlock</h3>
+        <p>I used nn.sequential again in FCBlock __init__(). In foward(), call nn.sequential. Here I reshape the out put to be (N, D, 1, 1) to align the shape. </p>
+        <h3>Implementing Time Conditional UNet</h3>
+        <p>
+            In __init__ function, I initiate all required simple operation objects like for unconditional UNet, with two more time-conditioned blocks. 
+            Since conditional signal t is scalar, we should initialize FCBlock with in_channels = 1. 
+            In foward(), I add t1 after unflatten, and add t2 after up1. 
+        </p>
+        <h3>2.2 Training</h3>
+        <p>
+            Initialize dataloader with batch_size=128 and Class Conditional UNet model with in_channels=1, num_classes=1, num_hiddens=64. 
+            Then, create a Adam optimizer with an initial learning rate of 1e-3, and an exponential learning rate decay scheduler with a gamma of 0.1^(1/num_epochs)
+            Use Min-Squared Error as loss function. Start training with 20 epochs. 
+        </p>
+        <p>
+            In each epoch, load a batch of training data. Run forward process on the batch and record the loss, then run backward process. 
+            After every epoch, do scheduler.step() and save current model for backup. After every 5 epochs, sample 64 images and evaluate them using the model. 
+        </p>
+        <h3>Forward Process</h3>
+        <p>
+            For each batch, first generate random timesteps of size N=batch_size for each image in the batch, then add noise of timestep t for each image. 
+            Normalize t and pass the training data (x_0, x_t, normalized_t) to the model to train. 
+        </p>
+        <h3>Training Loss Curve</h3>
+        <img src="media/B2.2_train_loss.png">
+
+        <h3>2.3 Sampling</h3>
+        <p>First generate 64 random images, and iteratively denoise the samples using the iterative approach in part A
+            except that I used the time conditional unet model to estimate noise in each iterative step. 
+            In each iterative step, generate a tensor of shape (num_samples, ) and each element is t/T (normalized). 
+            Pass normalized t and x_t to time conditional UNet model to estimate noise. noise z is standard noise if t>1 and 0 otherwise. 
+            Finally, use the equation to update x_t and go to next iterative step. 
+        </p>
+        
+        <h3>Sampling after every 5 epochs</h3>
+        <h3>Epoch 5</h3>
+        <img src="media/B2.3_epoch5.png">
+        <h3>Epoch 10</h3>
+        <img src="media/B2.3_epoch10.png">
+        <h3>Epoch 15</h3>
+        <img src="media/B2.3_epoch15.png">
+        <h3>Epoch 20</h3>
+        <img src="media/B2.3_epoch20.png">
+
+        <h3>2.4 Adding Class-Conditioning to UNet</h3>
+        <h3>Implementing Time Conditional UNet</h3>
+        <p>
+            In __init__ function, I initiate all required simple operation objects like for time conditional UNet, with two more class-conditioned fcblocks. 
+            Since conditional signal t is scalar, we should initialize FCBlock with in_channels = 1. 
+            Since conditional signal c is should have size (N, num_classes=10), we should initialize FCBlock with in_channels = num_classes. 
+            In foward(), I added two conditioning steps: c1 * unflatten + t1, and c2 * up1 + t2. 
+        </p>
+        <h3>Training</h3>
+        <p>
+            Initialize dataloader with batch_size=128 and Class Conditional UNet model with in_channels=1, num_classes=10, num_hiddens=64 and probability of dropping class conditional of 0.1 during training. 
+            Then, create a Adam optimizer with an initial learning rate of 1e-3, and an exponential learning rate decay scheduler with a gamma of 0.1^(1/num_epochs)
+            Use Min-Squared Error as loss function. Start training with 20 epochs. 
+        </p>
+        <p>
+            In each epoch, load a batch of training data. Run forward process with classes of the data in the batch and record the loss, then run backward process. 
+            After every epoch, do scheduler.step() and save current model for backup. After every 5 epochs, sample 64 images and evaluate them using the model. 
+        </p>
+        <h3>Forward Process</h3>
+        <p>
+            For each batch, first generate random timesteps of size N=batch_size for each image in the batch, then add noise of timestep t for each image. 
+            Normalize t to pass to the training model. 
+        </p>
+        <p>
+            Then, using classes of the data in the batch, c, generate a one-hot version of c using torch.nn.functional.one_hot with num_classes=10. c_onehot has shape (batch_size, num_classes). 
+            To drop out class with prob=0.1, generate a mask of 0(dropout) and 1(keep). Use torch.bernoulli with prob=1-p_uncound and reshape it to (N, 1). 
+            c_onehot = c_onehot * mask to drop 10% of the classes. 
+        </p>
+        <p>Finally, pass normalized_t, c_onehot and x_t to the class conditional unet model for training. Compute and record the loss for current batch. </p>
+        <h3>Training Loss Curve</h3>
+        <img src="media/B2.4_training_curve.png">
+        
+        <h3>2.5 Sampling from the Class-Conditioned UNet</h3>
+        <p>I want 4 samples in each class, so first generate 4*10 = 40 random images, and iteratively denoise the samples using the iterative approach in part A
+            except that I used the class conditional unet model to estimate noise in each iterative step. 
+        </p>
+        <p>
+            For those 40 samples, generate a c consisting four 0s, four 1s, ..., four 10s, and turn it into a one-hot tensor of shape (40, 10)
+        </p>
+        <p>
+            In each iterative step, generate a tensor of shape (num_samples, ) and each element is t/T (normalized). 
+        </p>
+        <p>
+            Then, estimate two noises: unconditioned and conditioned. 
+        </p>
+        <p>
+            Pass normalized t, one-hot c and x_t to UNet model to estimate conditional noise, and pass one-hot tensor of all 0s for unconditional estimated noise. 
+            Combine the estimated conditional and unconditional noise by sclae gamma=5. Noise z is standard noise if t>1 and 0 otherwise. 
+        </p>
+        <p>
+            Finally, use the equation to update x_t and go to next iterative step. 
+        </p>
+        
+        
+        <h3>Sampling after every 5 epochs</h3>
+        <h3>Epoch 5</h3>
+        <img src="media/B2.5_epoch5.png">
+        <h3>Epoch 10</h3>
+        <img src="media/B2.5_epoch10.png">
+        <h3>Epoch 15</h3>
+        <img src="media/B2.5_epoch15.png">
+        <h3>Epoch 20</h3>
+        <img src="media/B2.5_epoch20.png">
+        
+
+        
+
+    </div>
+
+
+
+    
+</body>
+</html>
