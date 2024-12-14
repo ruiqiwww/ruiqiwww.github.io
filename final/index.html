@@ -1,0 +1,314 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CS180 Final Projects - Ruiqi Wang</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 80px;
+        }
+    </style>
+</head>
+<body>
+    <h1>CS180 Final Projects: </h1>
+    <h1>Light Field Camera & Image Quilting</h1>
+    <h3>by Ruiqi Wang</h3>
+
+    <h1>Project 1 - Lightfield Camera: </h1>
+    <h2>Depth Refocusing and Aperture Adjustment with Light Field Data</h2>
+    <div class="container">
+        <h2>Overview</h2>
+        <p>
+            Using multiple images over a plane orthogonal to the optical axis enables achieving complex effects. 
+            In this project, I achieved depth refocusing by taking shifted averages over all images, and adjusted aperture by taking averages over subsets of different sizes. 
+        </p>
+    </div>
+    <div class="container">
+        <h2>1.Depth Refocusing</h2>
+        <p>
+            The objects that are far away move very little when moving the camera, while objects that are close move a lot. 
+            Therefore, calculating the average of the images taken over a grid gives a images that focus on the far away images. 
+            Following on this, we can calculate the shift for each image towards the center image. 
+            We can find the positions of camera from the file name, and compute the distance between camera positions to be the shift. 
+            Then, multiply the shifts by a facter alpha to change the refocused depth to implement depth refocusing
+        </p>
+        <h3>
+            Images refocues at various depths: 
+        </h3>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/depths/-1.png">
+                <p>depth factor = -0.1</p>
+            </div>
+            <div class="image-container">
+                <img src="media/depths/0.png">
+                <p>depth factor = 0</p>
+            </div>
+        </div>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/depths/1.png">
+                <p>depth factor = 0.1</p>
+            </div>
+            <div class="image-container">
+                <img src="media/depths/2.png">
+                <p>depth factor = 0.2</p>
+            </div>
+        </div>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/depths/3.png">
+                <p>depth factor = 0.3</p>
+            </div>
+            <div class="image-container">
+                <img src="media/depths/4.png">
+                <p>depth factor = 0.4</p>
+            </div>
+        </div>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/depths/5.png">
+                <p>depth factor = 0.5</p>
+            </div>
+        </div>
+        <h3>Gif result: </h3>
+        <img src="media/refocused_images.gif">
+       
+    </div>
+
+    <div class="container">
+        <h2>2.Aperture Adjustment</h2>
+        <p>
+            Averaging a large number of images sampled over the grid perpendicular to the optical axis mimics a camera with a much larger aperture. 
+            Thus, set the center image as distance 0. Compute the distance to center image for each image in the grid. 
+            To mimic a smaller aperture, include images that are closer to the center. Adjust the radius of the subset to adjust the aperture. 
+        </p>
+        <h3>
+            Aperture adjustment with different radius: 
+        </h3>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/apertures/5.png">
+            </div>
+            <div class="image-container">
+                <img src="media/apertures/10.png">
+            </div>
+        </div>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/apertures/15.png">
+            </div>
+            <div class="image-container">
+                <img src="media/apertures/20.png">
+            </div>
+        </div>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/apertures/25.png">
+            </div>
+            <div class="image-container">
+                <img src="media/apertures/30.png">
+            </div>
+        </div>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/apertures/35.png">
+            </div>
+            <div class="image-container">
+                <img src="media/apertures/40.png">
+            </div>
+        </div>
+        <div class="images">
+            <div class="image-container">
+                <img src="media/apertures/45.png">
+            </div>
+            <div class="image-container">
+                <img src="media/apertures/50.png">
+            </div>
+            <div class="image-container">
+                <img src="media/apertures/55.png">
+            </div>
+        </div>
+        <h3>Gif result: </h3>
+        <img src="media/aperture_adjustment.gif">
+    </div>
+
+    <div class="container">
+        <h2>Summary</h2>
+        <p>
+            It is very interesting that by taking simple shifts and averages over images can have such wonderful effects. 
+            However, I think the most difficult part here is how to take effective inputs. It is hard to move cameras over a grid with slight changes, especially by hand. 
+        </p>
+    </div>
+
+    <h1>Project2: Image Quilting</h1>
+    <div class="container">
+        <h2>Overview</h2>
+        <p>
+            Following the algorithm described in SIGGRAPH 2001 paper by Efros and Freeman, I implemented various texture synthesis functions and did texture transfering. 
+        </p>
+        <div class="container">
+            <h2>1.Randomly Sampled Texture</h2>
+            <p>
+                Firstly, implement a naive approach to do texture synthesis. Randomly sample patches from the input, and fill up the output image with random samples. 
+            </p>
+            <h3>
+                Randomly sampled texture synthesis result using bricks: 
+            </h3>
+            <div class="images">
+                <div class="image-container">
+                    <img src="media/bricks_small.jpg">
+                    <p>Sample: Bricks</p>
+                </div>
+                <div class="image-container">
+                    <img src="media/part1.png">
+                    <p>Randomly sampled texture synthesis (patch_size = 15)</p>
+                </div>
+            </div>
+        </div>
+        <div class="container">
+            <h2>2.Overlapping Patches </h2>
+            <h3>Method</h3>
+            <p>
+                For the first patch, I still randomly choose a patch from the input. 
+                For the other patches, define an overlapping region according to current output, and create a template. 
+                Calculate the difference in the overlapping region for each possible patches in the input sample, and choose a random patch that is similar enough to the template. 
+                Finally paste that chosen patch to the output, and repeat until the whole output image is filled up. 
+            </p>
+            <h3>Helper functions: </h3>
+            <p>As suggested, I implemented two helper functions: ssd_patch and choose_sample. </p>
+            <p>ssd_patch takes in a template, which is the target region in the output; a mask, which denotes the overlapping region; and the input image. 
+                The function computes the difference between each possible patch with the template in the overlapping region, and returns a map denoting the costs for each patch. 
+                It uses the formula sd_cost = ((M*T)**2).sum() - 2 * cv2.filter2D(I, ddepth=-1, kernel = M*T) + cv2.filter2D(I ** 2, ddepth=-1, kernel=M) to compute the ssd cost. 
+            </p>
+            <p>For pixels that are too close to the border such that it cannot represent a full patch, set their ssd costs to be the maximum value. </p>
+            <p>choose_sample takes in a map of costs for each patch and a value tol. All patches with cost higher than tol will be filtered out, 
+                and the function chooses a random patch from the remaining patches. </p>
+            <h3>
+                Texture synthesis result using overlapping patches: 
+            </h3>
+            <div class="images">
+                <div class="image-container">
+                    <img src="media/part1.png">
+                    <p>Randomly sampled texture synthesis (patch_size = 15)</p>
+                </div>
+                <div class="image-container">
+                    <img src="media/part2.png">
+                    <p>Texture synthesis using overlapping patches (patch_size = 35, overlap = 15)</p>
+                </div>
+            </div>
+            <p>Comparing with result using random samples, the edges between patches are much smoother, because we only choose samples that are similar to each other in the overlapping region.
+                But we can still see some "cuts" between pathces. 
+            </p>
+        </div>
+
+        <div class="container">
+            <h2>3.Seam Finding </h2>
+            <h3>Method</h3>
+            <p>
+                To remove edge artifacts from the overlapping patches, I implemented seam finding to find a good "cut" in the overlapping region instead of simply replacing. 
+            </p>
+            <p>After finding the best random patch as described in part two, I find the overlapping region in the chosen patch. 
+                Using the provided helper function cut, I find the best cut in vertical overlapping region and best cut in horizontal overlapping region, and combined the two cut masks. 
+                Finally, use the cut mask to paste part of the new patch to the output image to avoid edge artifacts. 
+                
+            </p>
+            
+            <h3>
+                Texture synthesis result using overlapping patches and seam finding: 
+            </h3>
+            <div class="images">
+                <div class="image-container">
+                    <img src="media/part2.png">
+                    <p>Texture synthesis using overlapping patches (patch_size = 35, overlap = 15)</p>
+                </div>
+                <div class="image-container">
+                    <img src="media/part3.png">
+                    <p>Texture synthesis using overlapping patches and seam finding (patch_size = 25, overlap = 11)</p>
+                </div>
+            </div>
+            <p>Comparing with result without seam finding, there are much less "edges" in the result. 
+            </p>
+        </div>
+
+        <div class="container">
+            <h2>4.Texture Transfer</h2>
+            <h3>Method</h3>
+            <p>
+                Now that we achieved great results from texture synthesis, we can transfer the texture to a target image using a similar algorithm. 
+            </p>
+            <p>
+                After computing the cost for each patch comparing to the overlapping region, add another cost for the cost between the target guidance image and the patch. 
+                To do this, find the current patch region in the guidance image to be the template, and use a mask of all 1s to compare the whole patches. 
+                Reuse the ssd_patch with guidance template and guidance mask to compute guidance cost, and combine both costs with weight alpha to find the final cost. 
+                Use the final cost to choose a patch that has smooth transition in the overlapping region and has similar pattern as guidance image. 
+                Reuse seam finding to get the best cut to avoid edges and paste the patch into the output. 
+            </p>
+            
+            <h3>
+                Texture transfering results: 
+            </h3>
+            
+            <div class="images">
+                <div class="image-container">
+                    <img src="media/part4.png">
+                    <p>Texture: toast</p>
+                </div>
+                <div class="image-container">
+                    <img src="media/part4_sketch.png">
+                    <p>Texture: sketch</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <h2>Bells & Whistles: Iterative Texture Transfer</h2>
+            <h3>Method</h3>
+            <p>
+                To get better results for texture transferring, 
+                we can iterate for several rounds with smaller patch_size, smaller overlap and smaller alpha in each iteration. 
+                In each iteration, I can update the output image, which shows the details in guidance image better. 
+            </p>
+            
+            <h3>
+                Compare interative approach and naive approach: 
+            </h3>
+            <p>Naive Approach uses patch_size: 15, overlap = 7, alpha=0.8</p>
+            <p>Iterative Approach uses initial patch_size: 25, overlap = 11, alpha=0.8 and 3 iterations</p>
+            
+            <div class="images">
+                <div class="image-container">
+                    <img src="media/part4.png">
+                    <p>Naive</p>
+                </div>
+                <div class="image-container">
+                    <img src="media/b&w_toast.png">
+                    <p>3 iterations</p>
+                </div>
+            </div>
+            <div class="images">
+                <div class="image-container">
+                    <img src="media/part4_sketch.png">
+                    <p>Naive</p>
+                </div>
+                <div class="image-container">
+                    <img src="media/b&w_sketch.png">
+                    <p>3 iterations</p>
+                </div>
+            </div>
+            <p>Only with 3 iterations, the facial details such as eyes, nose and mouth are much better than the naive approch, even though the initial patch size is much bigger for iterative appoach. </p>
+        </div>
+
+    </div>
+    
+    
+
+
+
+    
+</body>
+</html>
